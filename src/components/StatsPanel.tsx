@@ -1,7 +1,7 @@
 type StatsPanelProps = {
   totalCount: number
   visibleCount: number
-  activeTypes: string[]
+  activeFilters: string[]
   isLoading: boolean
   error: string | null
 }
@@ -9,7 +9,7 @@ type StatsPanelProps = {
 function StatsPanel({
   totalCount,
   visibleCount,
-  activeTypes,
+  activeFilters,
   isLoading,
   error,
 }: StatsPanelProps) {
@@ -51,10 +51,10 @@ function StatsPanel({
         <strong>Активные фильтры:</strong>
         <br />
 
-        {activeTypes.length > 0 ? (
-          activeTypes.map((type) => (
-            <span className="stats-tag" key={type}>
-              {type}
+        {activeFilters.length > 0 ? (
+          activeFilters.map((filter) => (
+            <span className="stats-tag" key={filter}>
+              {filter}
             </span>
           ))
         ) : (

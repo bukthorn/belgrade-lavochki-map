@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { BenchItem } from '../types/bench'
 import { parseCoordinate } from '../utils/geo'
-import { getType, getTypeColor } from '../utils/tags'
+import { getType, getTypeBorder } from '../utils/tags'
+import { getPlace, getPlaceColor } from '../utils/place'
 
 type MapViewProps = {
   items: BenchItem[]
+  allPlaces: string[]
 }
 
 function escapeHtml(value: string | undefined): string {
@@ -19,10 +21,11 @@ function escapeHtml(value: string | undefined): string {
     .replaceAll("'", '&#039;')
 }
 
-function createMarkerElement(color: string): HTMLDivElement {
+function createMarkerElement(color: string, border: string): HTMLDivElement {
   const element = document.createElement('div')
   element.className = 'bench-marker'
   element.style.background = color
+  element.style.border = border
   return element
 }
 
@@ -60,7 +63,7 @@ function createPopupContent(item: BenchItem): string {
   `
 }
 
-function MapView({ items }: MapViewProps) {
+function MapView({ items, allPlaces }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
@@ -78,25 +81,24 @@ function MapView({ items }: MapViewProps) {
       style: {
         version: 8,
         sources: {
-          cartoLight: {
+          osm: {
             type: 'raster',
             tiles: [
-              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
             ],
             tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            attribution: '&copy; OpenStreetMap contributors',
           },
         },
         layers: [
           {
-            id: 'carto-light-layer',
+            id: 'osm-layer',
             type: 'raster',
-            source: 'cartoLight',
+            source: 'osm',
             minzoom: 0,
-            maxzoom: 20,
+            maxzoom: 19,
           },
         ],
       },
@@ -136,8 +138,9 @@ function MapView({ items }: MapViewProps) {
         return
       }
 
-      const color = getTypeColor(getType(item))
-      const markerElement = createMarkerElement(color)
+      const color = getPlaceColor(getPlace(item), allPlaces)
+      const border = getTypeBorder(getType(item))
+      const markerElement = createMarkerElement(color, border)
 
       const popup = new maplibregl.Popup({
         offset: 18,
@@ -167,7 +170,7 @@ function MapView({ items }: MapViewProps) {
 
       didFitBoundsRef.current = true
     }
-  }, [items, mapReady])
+  }, [items, allPlaces, mapReady])
 
   return <div ref={mapContainerRef} className="map-container" />
 }
