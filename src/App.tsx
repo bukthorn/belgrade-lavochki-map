@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchBenchItems } from './data/googleSheets'
 import type { BenchItem } from './types/bench'
 import { getAllTypes, itemMatchesSelectedTypes } from './utils/tags'
+import { getAllPlaces, itemMatchesSelectedPlaces } from './utils/place'
 import MapView from './components/MapView'
 import StatsPanel from './components/StatsPanel'
-import TypeFilters from './components/TypeFilters'
+import Filters from './components/Filters'
 
 function App() {
   const [items, setItems] = useState<BenchItem[]>([])
+  const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set())
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,12 +37,32 @@ function App() {
     loadData()
   }, [])
 
+  const allPlaces = useMemo(() => getAllPlaces(items), [items])
   const allTypes = useMemo(() => getAllTypes(items), [items])
 
   const visibleItems = useMemo(
-    () => items.filter((item) => itemMatchesSelectedTypes(item, selectedTypes)),
-    [items, selectedTypes],
+    () =>
+      items.filter(
+        (item) =>
+          itemMatchesSelectedPlaces(item, selectedPlaces) &&
+          itemMatchesSelectedTypes(item, selectedTypes),
+      ),
+    [items, selectedPlaces, selectedTypes],
   )
+
+  function handleTogglePlace(place: string) {
+    setSelectedPlaces((currentPlaces) => {
+      const nextPlaces = new Set(currentPlaces)
+
+      if (nextPlaces.has(place)) {
+        nextPlaces.delete(place)
+      } else {
+        nextPlaces.add(place)
+      }
+
+      return nextPlaces
+    })
+  }
 
   function handleToggleType(type: string) {
     setSelectedTypes((currentTypes) => {
@@ -57,24 +79,28 @@ function App() {
   }
 
   function handleClearFilters() {
+    setSelectedPlaces(new Set())
     setSelectedTypes(new Set())
   }
 
   return (
     <div className="app-map-page">
-      <MapView items={visibleItems} />
+      <MapView items={visibleItems} allPlaces={allPlaces} />
 
       <StatsPanel
         totalCount={items.length}
         visibleCount={visibleItems.length}
-        activeTypes={Array.from(selectedTypes)}
+        activeFilters={[...selectedPlaces, ...selectedTypes]}
         isLoading={isLoading}
         error={error}
       />
 
-      <TypeFilters
+      <Filters
+        allPlaces={allPlaces}
         allTypes={allTypes}
+        selectedPlaces={selectedPlaces}
         selectedTypes={selectedTypes}
+        onTogglePlace={handleTogglePlace}
         onToggleType={handleToggleType}
         onClear={handleClearFilters}
       />

@@ -101,6 +101,14 @@ body,
   color: #1f1f1f;
 }
 
+.filter-group {
+  margin-bottom: 14px;
+}
+
+.filter-group:last-of-type {
+  margin-bottom: 0;
+}
+
 .filter-header {
   display: flex;
   justify-content: space-between;
@@ -168,6 +176,10 @@ body,
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
+.filter-color-dot--outline {
+  background: #eeeeee;
+}
+
 .filter-actions {
   display: flex;
   justify-content: flex-end;
@@ -194,7 +206,6 @@ body,
   border-radius: 50%;
   box-sizing: border-box;
   cursor: pointer;
-  border: 3px solid #ffffff;
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.8),
     0 4px 14px rgba(0, 0, 0, 0.28);
