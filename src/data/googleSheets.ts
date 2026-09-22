@@ -1,12 +1,13 @@
 import Papa from 'papaparse'
-import type { GraffitiItem } from '../types/graffiti'
+import type { BenchItem } from '../types/bench'
 
+// Sheet columns expected: latitude, longitude, place, date, type
 const CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRhpOdfbetAkVGXD_6hKYAEDtuS2yzQfCX3yR-4YubijnBSIaGnByVcmK1LZQ0Nyotn0MiwiJ-8xyjv/pub?gid=0&single=true&output=csv'
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRSIFBskZEtyavXDwVk2iGWDB7bPFIYpCMrGpPwDT_kxR835tO95V_9NseIHGnF7eurE-_-246cowtk/pub?output=csv'
 
 function cleanHeader(header: string): string {
   return String(header || '')
-    .replace(/^\uFEFF/, '')
+    .replace(/^﻿/, '')
     .trim()
     .toLowerCase()
 }
@@ -16,7 +17,7 @@ function cleanValue(value: unknown): string {
 }
 
 function parseCsv(csvText: string, delimiter = '') {
-  return Papa.parse<GraffitiItem>(csvText, {
+  return Papa.parse<BenchItem>(csvText, {
     header: true,
     skipEmptyLines: true,
     delimiter,
@@ -25,20 +26,20 @@ function parseCsv(csvText: string, delimiter = '') {
   })
 }
 
-function hasCoordinateColumns(row: GraffitiItem): boolean {
+function hasCoordinateColumns(row: BenchItem): boolean {
   return (
     Object.prototype.hasOwnProperty.call(row, 'latitude') &&
     Object.prototype.hasOwnProperty.call(row, 'longitude')
   )
 }
 
-function removeEmptyRows(items: GraffitiItem[]): GraffitiItem[] {
+function removeEmptyRows(items: BenchItem[]): BenchItem[] {
   return items.filter((item) =>
     Object.values(item).some((value) => String(value ?? '').trim() !== ''),
   )
 }
 
-export async function fetchGraffitiItems(): Promise<GraffitiItem[]> {
+export async function fetchBenchItems(): Promise<BenchItem[]> {
   const response = await fetch(CSV_URL)
 
   if (!response.ok) {
