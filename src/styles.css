@@ -201,8 +201,8 @@ body,
 }
 
 .bench-marker {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   box-sizing: border-box;
   cursor: pointer;
