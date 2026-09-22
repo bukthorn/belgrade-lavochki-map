@@ -1,7 +1,7 @@
 type StatsPanelProps = {
   totalCount: number
   visibleCount: number
-  activeTags: string[]
+  activeTypes: string[]
   isLoading: boolean
   error: string | null
 }
@@ -9,15 +9,15 @@ type StatsPanelProps = {
 function StatsPanel({
   totalCount,
   visibleCount,
-  activeTags,
+  activeTypes,
   isLoading,
   error,
 }: StatsPanelProps) {
   if (isLoading) {
     return (
       <div className="stats-panel">
-        <div className="stats-title">Belgrade Graffiti Map</div>
-        <div>Loading data...</div>
+        <div className="stats-title">Карта лавочек</div>
+        <div>Загрузка данных...</div>
       </div>
     )
   }
@@ -25,7 +25,7 @@ function StatsPanel({
   if (error) {
     return (
       <div className="stats-panel">
-        <div className="stats-title">Loading error</div>
+        <div className="stats-title">Ошибка загрузки</div>
         <div>{error}</div>
       </div>
     )
@@ -33,32 +33,32 @@ function StatsPanel({
 
   return (
     <div className="stats-panel">
-      <div className="stats-title">Belgrade Graffiti Map</div>
+      <div className="stats-title">Карта лавочек</div>
 
       <div className="stats-grid">
         <div className="stats-card">
           <div className="stats-value">{totalCount}</div>
-          <div className="stats-label">Total</div>
+          <div className="stats-label">Всего</div>
         </div>
 
         <div className="stats-card">
           <div className="stats-value">{visibleCount}</div>
-          <div className="stats-label">Visible</div>
+          <div className="stats-label">Показано</div>
         </div>
       </div>
 
       <div className="stats-filters">
-        <strong>Active filters:</strong>
+        <strong>Активные фильтры:</strong>
         <br />
 
-        {activeTags.length > 0 ? (
-          activeTags.map((tag) => (
-            <span className="stats-tag" key={tag}>
-              {tag}
+        {activeTypes.length > 0 ? (
+          activeTypes.map((type) => (
+            <span className="stats-tag" key={type}>
+              {type}
             </span>
           ))
         ) : (
-          <span>No active filters</span>
+          <span>Нет активных фильтров</span>
         )}
       </div>
     </div>

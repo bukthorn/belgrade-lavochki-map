@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
-import type { GraffitiItem } from '../types/graffiti'
+import type { BenchItem } from '../types/bench'
 import { parseCoordinate } from '../utils/geo'
-import { getMarkerClass, getTags } from '../utils/tags'
+import { getType, getTypeColor } from '../utils/tags'
 
 type MapViewProps = {
-  items: GraffitiItem[]
+  items: BenchItem[]
 }
 
 function escapeHtml(value: string | undefined): string {
@@ -19,32 +19,28 @@ function escapeHtml(value: string | undefined): string {
     .replaceAll("'", '&#039;')
 }
 
-function createMarkerElement(tags: string[]): HTMLDivElement {
+function createMarkerElement(color: string): HTMLDivElement {
   const element = document.createElement('div')
-  element.className = `graffiti-marker ${getMarkerClass(tags)}`
+  element.className = 'bench-marker'
+  element.style.background = color
   return element
 }
 
-function createPopupContent(item: GraffitiItem): string {
-  const originalText = escapeHtml(item.original_text)
-  const possibleMeaning = escapeHtml(item.possible_meaning)
+function createPopupContent(item: BenchItem): string {
+  const place = escapeHtml(item.place)
   const date = escapeHtml(item.date)
-  const tags = getTags(item)
-
-  const tagsHtml = tags
-    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
-    .join('')
+  const type = escapeHtml(item.type)
 
   return `
     <div class="popup-content">
-      <div class="popup-title">${originalText || 'Untitled graffiti'}</div>
+      <div class="popup-title">${place || 'Лавочка'}</div>
 
       ${
-        possibleMeaning
+        type
           ? `
             <div class="popup-row">
-              <strong>Possible meaning:</strong><br>
-              ${possibleMeaning}
+              <strong>Тип:</strong><br>
+              ${type}
             </div>
           `
           : ''
@@ -54,19 +50,8 @@ function createPopupContent(item: GraffitiItem): string {
         date
           ? `
             <div class="popup-row">
-              <strong>Date:</strong><br>
+              <strong>Дата:</strong><br>
               ${date}
-            </div>
-          `
-          : ''
-      }
-
-      ${
-        tags.length
-          ? `
-            <div class="popup-row">
-              <strong>Tags:</strong><br>
-              ${tagsHtml}
             </div>
           `
           : ''
@@ -151,8 +136,8 @@ function MapView({ items }: MapViewProps) {
         return
       }
 
-      const tags = getTags(item)
-      const markerElement = createMarkerElement(tags)
+      const color = getTypeColor(getType(item))
+      const markerElement = createMarkerElement(color)
 
       const popup = new maplibregl.Popup({
         offset: 18,
