@@ -188,35 +188,16 @@ body,
   text-decoration: underline;
 }
 
-.graffiti-marker {
+.bench-marker {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   box-sizing: border-box;
   cursor: pointer;
+  border: 3px solid #ffffff;
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.8),
     0 4px 14px rgba(0, 0, 0, 0.28);
-}
-
-.marker-football {
-  background: #2e7d32;
-  border: 3px solid #ffffff;
-}
-
-.marker-politics {
-  background: #8b5a2b;
-  border: 3px solid #d1a06a;
-}
-
-.marker-religion {
-  background: #f2c94c;
-  border: 3px solid #ffffff;
-}
-
-.marker-default {
-  background: #777777;
-  border: 3px solid #eeeeee;
 }
 
 .popup-content {
