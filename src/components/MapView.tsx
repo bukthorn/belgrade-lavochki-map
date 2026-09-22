@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 import type { BenchItem } from '../types/bench'
 import { parseCoordinate } from '../utils/geo'
 import { getType, getTypeColor } from '../utils/tags'
