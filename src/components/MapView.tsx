@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
+import type { FeatureCollection, Point } from 'geojson'
 import type { BenchItem } from '../types/bench'
 import type { LatLng } from '../utils/geo'
-import { getType, getTypeBorder } from '../utils/tags'
+import { getType, getTypeStroke } from '../utils/tags'
 import { getPlace, getPlaceColor } from '../utils/place'
 
 type MapViewProps = {
@@ -11,6 +12,22 @@ type MapViewProps = {
   draftPoint: LatLng | null
   onMapClick: (point: LatLng) => void
 }
+
+// Free vector tiles without an API key or a usage limit: openfreemap.org
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+
+// Benches are drawn by the map itself as one GeoJSON layer instead of a DOM
+// element each, so thousands of them stay smooth and an update doesn't
+// rebuild anything on the page
+const BENCH_SOURCE = 'benches'
+const BENCH_LAYER = 'benches'
+
+// A bench dot is 16 px across, with a light ring and a soft shadow
+const BENCH_RADIUS = 8
+const RING_WIDTH = 2
+
+// Extra pixels around a tap, so a small dot is easy to hit with a finger
+const TAP_TOLERANCE = 8
 
 // How long to wait for a second click before treating the first as single
 const DOUBLE_CLICK_MS = 300
@@ -29,14 +46,6 @@ function escapeHtml(value: string | undefined): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
-}
-
-function createMarkerElement(color: string, border: string): HTMLDivElement {
-  const element = document.createElement('div')
-  element.className = 'bench-marker'
-  element.style.background = color
-  element.style.border = border
-  return element
 }
 
 // 2026-09-23 -> 23.09.2026
@@ -79,13 +88,87 @@ function createPopupContent(item: BenchItem): string {
   `
 }
 
+// Colors are resolved here, so the layer only reads them from properties
+function toFeatureCollection(
+  items: BenchItem[],
+  allPlaces: string[],
+): FeatureCollection<Point> {
+  return {
+    type: 'FeatureCollection',
+    features: items.map((item) => {
+      const stroke = getTypeStroke(getType(item))
+
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [item.longitude, item.latitude],
+        },
+        properties: {
+          id: item.id,
+          color: getPlaceColor(getPlace(item), allPlaces),
+          strokeWidth: stroke.width,
+          strokeColor: stroke.color,
+        },
+      }
+    }),
+  }
+}
+
+function addBenchLayers(map: maplibregl.Map) {
+  map.addSource(BENCH_SOURCE, {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  })
+
+  map.addLayer({
+    id: 'benches-shadow',
+    type: 'circle',
+    source: BENCH_SOURCE,
+    paint: {
+      'circle-radius': BENCH_RADIUS + 6,
+      'circle-color': '#000000',
+      'circle-opacity': 0.28,
+      'circle-blur': 1,
+      'circle-translate': [0, 4],
+    },
+  })
+
+  map.addLayer({
+    id: 'benches-ring',
+    type: 'circle',
+    source: BENCH_SOURCE,
+    paint: {
+      'circle-radius': BENCH_RADIUS + RING_WIDTH,
+      'circle-color': '#ffffff',
+      'circle-opacity': 0.8,
+    },
+  })
+
+  // The stroke is drawn outside the radius, so the radius shrinks by the
+  // stroke width and every dot keeps the same overall size
+  map.addLayer({
+    id: BENCH_LAYER,
+    type: 'circle',
+    source: BENCH_SOURCE,
+    paint: {
+      'circle-radius': ['-', BENCH_RADIUS, ['get', 'strokeWidth']],
+      'circle-color': ['get', 'color'],
+      'circle-stroke-width': ['get', 'strokeWidth'],
+      'circle-stroke-color': ['get', 'strokeColor'],
+    },
+  })
+}
+
 function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
-  const markersRef = useRef<maplibregl.Marker[]>([])
   const draftMarkerRef = useRef<maplibregl.Marker | null>(null)
   const didFitBoundsRef = useRef(false)
   const onMapClickRef = useRef(onMapClick)
+
+  // Clicks on the layer only give a feature id; the bench is looked up here
+  const itemsRef = useRef(items)
 
   const [mapReady, setMapReady] = useState(false)
 
@@ -100,43 +183,64 @@ function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
       container: mapContainerRef.current,
       center: [20.4773, 44.8084],
       zoom: 15.5,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: [
-              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            ],
-            tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors',
-          },
-        },
-        layers: [
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm',
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
-      },
+      style: MAP_STYLE,
     })
 
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
 
     map.on('load', () => {
+      addBenchLayers(map)
       setMapReady(true)
     })
 
-    // Picking a point by clicking the map. Drags never produce a 'click' in
-    // MapLibre; the checks below drop the other taps that aren't meant as picks.
+    let popup: maplibregl.Popup | null = null
+
+    function findBench(point: maplibregl.Point): BenchItem | undefined {
+      if (!map.getLayer(BENCH_LAYER)) return undefined
+
+      const [feature] = map.queryRenderedFeatures(
+        [
+          [point.x - TAP_TOLERANCE, point.y - TAP_TOLERANCE],
+          [point.x + TAP_TOLERANCE, point.y + TAP_TOLERANCE],
+        ],
+        { layers: [BENCH_LAYER] },
+      )
+
+      if (!feature) return undefined
+
+      return itemsRef.current.find(
+        (item) => item.id === feature.properties.id,
+      )
+    }
+
+    function showPopup(item: BenchItem) {
+      popup?.remove()
+
+      popup = new maplibregl.Popup({
+        offset: BENCH_RADIUS + RING_WIDTH + 2,
+        closeButton: true,
+        closeOnClick: true,
+      })
+        .setLngLat([item.longitude, item.latitude])
+        .setHTML(createPopupContent(item))
+        .addTo(map)
+    }
+
+    map.on('mouseenter', BENCH_LAYER, () => {
+      map.getCanvas().style.cursor = 'pointer'
+    })
+
+    map.on('mouseleave', BENCH_LAYER, () => {
+      map.getCanvas().style.cursor = ''
+    })
+
+    // A click on a bench opens its popup; a click elsewhere picks a point.
+    // Drags never produce a 'click' in MapLibre; the checks below drop the
+    // other taps that aren't meant as picks.
     const container = map.getContainer()
     const activePointers = new Set<number>()
     let isNoiseGesture = false
+    let hadPopup = false
     let clickTimer: ReturnType<typeof setTimeout> | undefined
 
     function cancelPendingClick() {
@@ -147,9 +251,9 @@ function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
     // Capture phase: runs before MapLibre stops the inertia or closes popups
     function handlePointerDown(event: PointerEvent) {
       if (activePointers.size === 0) {
-        // A tap that stops a fling or closes a popup isn't a pick
-        isNoiseGesture =
-          map.isMoving() || Boolean(container.querySelector('.maplibregl-popup'))
+        // A tap that stops a fling does nothing at all
+        isNoiseGesture = map.isMoving()
+        hadPopup = Boolean(container.querySelector('.maplibregl-popup'))
       }
 
       activePointers.add(event.pointerId)
@@ -171,6 +275,17 @@ function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
 
       if (isNoiseGesture) return
       if (target?.closest('.maplibregl-marker, .maplibregl-popup')) return
+
+      const bench = findBench(event.point)
+
+      if (bench) {
+        cancelPendingClick()
+        showPopup(bench)
+        return
+      }
+
+      // A tap that closes a popup isn't a pick
+      if (hadPopup) return
 
       // The second click of a double-click zoom cancels the first one
       if (clickTimer) {
@@ -199,48 +314,26 @@ function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
       container.removeEventListener('pointerdown', handlePointerDown, true)
       window.removeEventListener('pointerup', handlePointerUp, true)
       window.removeEventListener('pointercancel', handlePointerUp, true)
-      markersRef.current.forEach((marker) => marker.remove())
-      markersRef.current = []
       map.remove()
       mapRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return
+    itemsRef.current = items
 
-    markersRef.current.forEach((marker) => marker.remove())
-    markersRef.current = []
+    const map = mapRef.current
+    if (!mapReady || !map) return
 
-    const bounds = new maplibregl.LngLatBounds()
-    items.forEach((item) => {
-      const lat = item.latitude
-      const lng = item.longitude
-
-      const color = getPlaceColor(getPlace(item), allPlaces)
-      const border = getTypeBorder(getType(item))
-      const markerElement = createMarkerElement(color, border)
-
-      const popup = new maplibregl.Popup({
-        offset: 18,
-        closeButton: true,
-        closeOnClick: true,
-      }).setHTML(createPopupContent(item))
-
-      const marker = new maplibregl.Marker({
-        element: markerElement,
-        anchor: 'center',
-      })
-        .setLngLat([lng, lat])
-        .setPopup(popup)
-        .addTo(mapRef.current!)
-
-      markersRef.current.push(marker)
-      bounds.extend([lng, lat])
-    })
+    map
+      .getSource<maplibregl.GeoJSONSource>(BENCH_SOURCE)
+      ?.setData(toFeatureCollection(items, allPlaces))
 
     if (!didFitBoundsRef.current && items.length > 0) {
-      mapRef.current.fitBounds(bounds, {
+      const bounds = new maplibregl.LngLatBounds()
+      items.forEach((item) => bounds.extend([item.longitude, item.latitude]))
+
+      map.fitBounds(bounds, {
         padding: 80,
         maxZoom: 17,
         duration: 600,

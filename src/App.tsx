@@ -21,11 +21,16 @@ function App() {
   useEffect(() => {
     async function loadData() {
       try {
-        setIsLoading(true)
-        setError(null)
-
         const data = await fetchBenchItems()
-        setItems(data)
+        const lastId = data.length > 0 ? data[data.length - 1].id : 0
+
+        // Benches that came over realtime while the request was in flight
+        // are newer than its snapshot, so they are kept
+        setItems((currentItems) => [
+          ...data,
+          ...currentItems.filter((item) => item.id > lastId),
+        ])
+        setError(null)
       } catch (loadError) {
         const message =
           loadError instanceof Error
@@ -38,7 +43,21 @@ function App() {
       }
     }
 
+    // Realtime misses inserts while the phone sleeps or the network is down,
+    // and a home-screen app has no reload button, so the list is fetched
+    // again whenever the app comes back
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') loadData()
+    }
+
     loadData()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('online', loadData)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('online', loadData)
+    }
   }, [])
 
   useEffect(() => subscribeToNewBenches(handleBenchAdded), [])

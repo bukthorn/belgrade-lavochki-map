@@ -446,17 +446,6 @@ body {
   right: var(--safe-right);
 }
 
-.bench-marker {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  box-sizing: border-box;
-  cursor: pointer;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.8),
-    0 4px 14px rgba(0, 0, 0, 0.28);
-}
-
 .popup-content {
   font-family: Arial, sans-serif;
   color: #1f1f1f;

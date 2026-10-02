@@ -26,11 +26,18 @@ export function getAllTypes(items: BenchItem[]): string[] {
   return Array.from(types).sort()
 }
 
-export function getTypeBorder(type: string): string {
-  if (type === 'backrest') return '3px solid #111111'
-  if (type === 'backless') return 'none'
+// Outline that tells the bench type apart, in pixels; the map layer and
+// the filter dots both draw it from here
+export function getTypeStroke(type: string): { width: number; color: string } {
+  if (type === 'backrest') return { width: 3, color: '#111111' }
+  if (type === 'backless') return { width: 0, color: '#111111' }
 
-  return '3px solid #ffffff'
+  return { width: 3, color: '#ffffff' }
+}
+
+export function getTypeBorder(type: string): string {
+  const { width, color } = getTypeStroke(type)
+  return width > 0 ? `${width}px solid ${color}` : 'none'
 }
 
 export function itemMatchesSelectedTypes(

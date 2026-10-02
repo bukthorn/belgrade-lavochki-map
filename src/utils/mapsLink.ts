@@ -18,8 +18,8 @@ function matchPair(text: string, pattern: RegExp): LatLng | null {
   return match ? toLatLng(Number(match[1]), Number(match[2])) : null
 }
 
-// maps.app.goo.gl links are redirects that only the Apps Script can follow
-// (the browser is blocked by CORS), so they are resolved before parsing.
+// maps.app.goo.gl links are redirects the browser can't follow because of
+// CORS, so the resolve-maps-link edge function expands them before parsing.
 export function isShortMapsLink(text: string): boolean {
   try {
     return SHORT_LINK_HOSTS.includes(new URL(text.trim()).hostname)

@@ -26,7 +26,9 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        # Exactly the versions in package-lock.json, so a new release of a
+        # dependency can't change or break a deploy on its own
+        run: npm ci
 
       - name: Build
         run: npm run build

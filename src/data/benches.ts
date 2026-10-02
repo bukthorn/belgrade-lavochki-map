@@ -21,18 +21,29 @@ function getClient() {
   return supabase
 }
 
-// The API returns at most 1000 rows per request; paginate once there are more
+// Matches "Max rows" in the Supabase API settings (1000 by default): the API
+// never returns more per request, so the rows are fetched page by page
+const PAGE_SIZE = 1000
+
 export async function fetchBenchItems(): Promise<BenchItem[]> {
-  const { data, error } = await getClient()
-    .from('benches')
-    .select(COLUMNS)
-    .order('id')
+  const items: BenchItem[] = []
 
-  if (error) {
-    throw new Error(error.message)
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await getClient()
+      .from('benches')
+      .select(COLUMNS)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    items.push(...(data as BenchItem[]))
+
+    // A short page is the last one
+    if (data.length < PAGE_SIZE) return items
   }
-
-  return data as BenchItem[]
 }
 
 export async function addBench(bench: NewBench): Promise<BenchItem> {

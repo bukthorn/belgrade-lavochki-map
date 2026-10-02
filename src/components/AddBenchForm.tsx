@@ -104,6 +104,14 @@ function AddBenchForm({
     }
   }, [link])
 
+  // "Bench added" only confirms the save, so it goes away on its own
+  useEffect(() => {
+    if (submitStatus?.kind !== 'ok') return
+
+    const timer = setTimeout(() => setSubmitStatus(null), 2000)
+    return () => clearTimeout(timer)
+  }, [submitStatus])
+
   const isSubmitting = submitStatus?.kind === 'pending'
   const canSubmit = Boolean(draftPoint && place && type) && !isSubmitting
 
