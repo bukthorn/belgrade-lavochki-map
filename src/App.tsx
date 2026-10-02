@@ -14,6 +14,7 @@ function App() {
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set())
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set())
   const [draftPoint, setDraftPoint] = useState<LatLng | null>(null)
+  const [pickedPoint, setPickedPoint] = useState<LatLng | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,6 +104,7 @@ function App() {
         items={visibleItems}
         allPlaces={allPlaces}
         draftPoint={draftPoint}
+        onMapClick={setPickedPoint}
       />
 
       <StatsPanel
@@ -126,6 +128,7 @@ function App() {
       <AddBenchForm
         onAdded={handleBenchAdded}
         onDraftPointChange={setDraftPoint}
+        pickedPoint={pickedPoint}
       />
     </div>
   )

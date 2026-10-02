@@ -9,6 +9,15 @@ type MapViewProps = {
   items: BenchItem[]
   allPlaces: string[]
   draftPoint: LatLng | null
+  onMapClick: (point: LatLng) => void
+}
+
+// How long to wait for a second click before treating the first as single
+const DOUBLE_CLICK_MS = 300
+
+// ~10 cm, more than a bench needs
+function roundCoordinate(value: number): number {
+  return Number(value.toFixed(6))
 }
 
 function escapeHtml(value: string | undefined): string {
@@ -70,14 +79,19 @@ function createPopupContent(item: BenchItem): string {
   `
 }
 
-function MapView({ items, allPlaces, draftPoint }: MapViewProps) {
+function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
   const draftMarkerRef = useRef<maplibregl.Marker | null>(null)
   const didFitBoundsRef = useRef(false)
+  const onMapClickRef = useRef(onMapClick)
 
   const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick
+  }, [onMapClick])
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
@@ -118,9 +132,73 @@ function MapView({ items, allPlaces, draftPoint }: MapViewProps) {
       setMapReady(true)
     })
 
+    // Picking a point by clicking the map. Drags never produce a 'click' in
+    // MapLibre; the checks below drop the other taps that aren't meant as picks.
+    const container = map.getContainer()
+    const activePointers = new Set<number>()
+    let isNoiseGesture = false
+    let clickTimer: ReturnType<typeof setTimeout> | undefined
+
+    function cancelPendingClick() {
+      clearTimeout(clickTimer)
+      clickTimer = undefined
+    }
+
+    // Capture phase: runs before MapLibre stops the inertia or closes popups
+    function handlePointerDown(event: PointerEvent) {
+      if (activePointers.size === 0) {
+        // A tap that stops a fling or closes a popup isn't a pick
+        isNoiseGesture =
+          map.isMoving() || Boolean(container.querySelector('.maplibregl-popup'))
+      }
+
+      activePointers.add(event.pointerId)
+
+      // Pinch zoom
+      if (activePointers.size > 1) isNoiseGesture = true
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      activePointers.delete(event.pointerId)
+    }
+
+    container.addEventListener('pointerdown', handlePointerDown, true)
+    window.addEventListener('pointerup', handlePointerUp, true)
+    window.addEventListener('pointercancel', handlePointerUp, true)
+
+    map.on('click', (event) => {
+      const target = event.originalEvent.target as Element | null
+
+      if (isNoiseGesture) return
+      if (target?.closest('.maplibregl-marker, .maplibregl-popup')) return
+
+      // The second click of a double-click zoom cancels the first one
+      if (clickTimer) {
+        cancelPendingClick()
+        return
+      }
+
+      const { lat, lng } = event.lngLat.wrap()
+
+      clickTimer = setTimeout(() => {
+        clickTimer = undefined
+        onMapClickRef.current({
+          lat: roundCoordinate(lat),
+          lng: roundCoordinate(lng),
+        })
+      }, DOUBLE_CLICK_MS)
+    })
+
+    // Double-tap zoom on touch screens moves the map without a second 'click'
+    map.on('movestart', cancelPendingClick)
+
     mapRef.current = map
 
     return () => {
+      cancelPendingClick()
+      container.removeEventListener('pointerdown', handlePointerDown, true)
+      window.removeEventListener('pointerup', handlePointerUp, true)
+      window.removeEventListener('pointercancel', handlePointerUp, true)
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
       map.remove()
@@ -187,6 +265,9 @@ function MapView({ items, allPlaces, draftPoint }: MapViewProps) {
     draftMarkerRef.current = new maplibregl.Marker({ color: '#111111' })
       .setLngLat(lngLat)
       .addTo(map)
+
+    // A point picked on the map is already in view; don't jump the camera
+    if (map.getBounds().contains(lngLat)) return
 
     map.easeTo({
       center: lngLat,

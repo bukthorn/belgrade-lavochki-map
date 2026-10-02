@@ -9,6 +9,7 @@ import { BENCH_TYPES } from '../utils/tags'
 type AddBenchFormProps = {
   onAdded: (bench: BenchItem) => void
   onDraftPointChange: (point: LatLng | null) => void
+  pickedPoint: LatLng | null
 }
 
 type Status = {
@@ -20,7 +21,11 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error'
 }
 
-function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
+function AddBenchForm({
+  onAdded,
+  onDraftPointChange,
+  pickedPoint,
+}: AddBenchFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [link, setLink] = useState('')
   const [latitude, setLatitude] = useState('')
@@ -38,6 +43,18 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
   useEffect(() => {
     onDraftPointChange(isOpen ? draftPoint : null)
   }, [isOpen, draftPoint, onDraftPointChange])
+
+  // A click on the map opens the form with the clicked point;
+  // every click is a new object, so repeated clicks all land here
+  useEffect(() => {
+    if (!pickedPoint) return
+
+    setIsOpen(true)
+    setLink('')
+    setLatitude(String(pickedPoint.lat))
+    setLongitude(String(pickedPoint.lng))
+    setSubmitStatus(null)
+  }, [pickedPoint])
 
   // Debounced so a link typed by hand doesn't fire a request per keystroke;
   // the cancelled flag drops answers for a link that has since changed.
@@ -144,6 +161,10 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
           ×
         </button>
       </div>
+
+      <span className="add-bench-label">
+        Click the map to put the bench there, or paste a link below
+      </span>
 
       <label className="add-bench-field">
         <span className="add-bench-label">Google Maps link or "lat, lng"</span>
