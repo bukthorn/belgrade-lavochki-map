@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import FilterGroup from './FilterGroup'
 import { getPlaceColor } from '../utils/place'
 import { getTypeBorder } from '../utils/tags'
@@ -21,10 +22,41 @@ function Filters({
   onToggleType,
   onClear,
 }: FiltersProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const activeCount = selectedPlaces.size + selectedTypes.size
+
+  if (!isOpen) {
+    return (
+      <button
+        className="panel-toggle panel-toggle--filters"
+        type="button"
+        onClick={() => setIsOpen(true)}
+      >
+        Filters
+        {activeCount > 0 && (
+          <span className="panel-toggle-badge">{activeCount}</span>
+        )}
+      </button>
+    )
+  }
+
   return (
     <div className="filter-panel">
+      <div className="panel-header">
+        <div className="filter-title">Filters</div>
+
+        <button
+          className="panel-close"
+          type="button"
+          aria-label="Close"
+          onClick={() => setIsOpen(false)}
+        >
+          ×
+        </button>
+      </div>
+
       <FilterGroup
-        title="Место"
+        title="Place"
         options={allPlaces}
         selectedValues={selectedPlaces}
         onToggle={onTogglePlace}
@@ -37,7 +69,7 @@ function Filters({
       />
 
       <FilterGroup
-        title="Тип"
+        title="Type"
         options={allTypes}
         selectedValues={selectedTypes}
         onToggle={onToggleType}
@@ -55,7 +87,7 @@ function Filters({
           type="button"
           onClick={onClear}
         >
-          Сбросить фильтры
+          Clear filters
         </button>
       </div>
     </div>

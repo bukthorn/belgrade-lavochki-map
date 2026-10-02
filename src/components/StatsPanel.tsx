@@ -1,3 +1,5 @@
+import { useState, type ReactNode } from 'react'
+
 type StatsPanelProps = {
   totalCount: number
   visibleCount: number
@@ -13,54 +15,86 @@ function StatsPanel({
   isLoading,
   error,
 }: StatsPanelProps) {
-  if (isLoading) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  if (!isOpen) {
+    let summary = `${visibleCount} / ${totalCount}`
+    if (isLoading) summary = '…'
+    if (error) summary = 'error'
+
     return (
-      <div className="stats-panel">
-        <div className="stats-title">Карта лавочек</div>
-        <div>Загрузка данных...</div>
-      </div>
+      <button
+        className="panel-toggle panel-toggle--stats"
+        type="button"
+        onClick={() => setIsOpen(true)}
+      >
+        Benches
+        <span
+          className={`panel-toggle-badge${error ? ' panel-toggle-badge--error' : ''}`}
+        >
+          {summary}
+        </span>
+      </button>
     )
   }
 
-  if (error) {
-    return (
-      <div className="stats-panel">
-        <div className="stats-title">Ошибка загрузки</div>
-        <div>{error}</div>
-      </div>
+  let title = 'Bench map'
+  let body: ReactNode
+
+  if (isLoading) {
+    body = <div>Loading data...</div>
+  } else if (error) {
+    title = 'Loading error'
+    body = <div>{error}</div>
+  } else {
+    body = (
+      <>
+        <div className="stats-grid">
+          <div className="stats-card">
+            <div className="stats-value">{totalCount}</div>
+            <div className="stats-label">Total</div>
+          </div>
+
+          <div className="stats-card">
+            <div className="stats-value">{visibleCount}</div>
+            <div className="stats-label">Shown</div>
+          </div>
+        </div>
+
+        <div className="stats-filters">
+          <strong>Active filters:</strong>
+          <br />
+
+          {activeFilters.length > 0 ? (
+            activeFilters.map((filter) => (
+              <span className="stats-tag" key={filter}>
+                {filter}
+              </span>
+            ))
+          ) : (
+            <span>No active filters</span>
+          )}
+        </div>
+      </>
     )
   }
 
   return (
     <div className="stats-panel">
-      <div className="stats-title">Карта лавочек</div>
+      <div className="panel-header stats-header">
+        <div className="stats-title">{title}</div>
 
-      <div className="stats-grid">
-        <div className="stats-card">
-          <div className="stats-value">{totalCount}</div>
-          <div className="stats-label">Всего</div>
-        </div>
-
-        <div className="stats-card">
-          <div className="stats-value">{visibleCount}</div>
-          <div className="stats-label">Показано</div>
-        </div>
+        <button
+          className="panel-close"
+          type="button"
+          aria-label="Close"
+          onClick={() => setIsOpen(false)}
+        >
+          ×
+        </button>
       </div>
 
-      <div className="stats-filters">
-        <strong>Активные фильтры:</strong>
-        <br />
-
-        {activeFilters.length > 0 ? (
-          activeFilters.map((filter) => (
-            <span className="stats-tag" key={filter}>
-              {filter}
-            </span>
-          ))
-        ) : (
-          <span>Нет активных фильтров</span>
-        )}
-      </div>
+      {body}
     </div>
   )
 }

@@ -36,14 +36,14 @@ async function resolveShortLink(url: string): Promise<string> {
     await response.body?.cancel()
 
     if (!location) {
-      throw new Error('Короткая ссылка не раскрылась')
+      throw new Error('The short link did not expand')
     }
 
     current = new URL(location, current).toString()
   }
 
   if (isShortLink(current)) {
-    throw new Error('Слишком много перенаправлений')
+    throw new Error('Too many redirects')
   }
 
   return current
@@ -59,12 +59,12 @@ Deno.serve(async (request) => {
     const link = String(url ?? '').trim()
 
     if (!isShortLink(link)) {
-      return json({ error: 'Это не короткая ссылка Google Maps' }, 400)
+      return json({ error: 'Not a Google Maps short link' }, 400)
     }
 
     return json({ url: await resolveShortLink(link) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Ошибка запроса'
+    const message = error instanceof Error ? error.message : 'Request error'
     return json({ error: message }, 400)
   }
 })

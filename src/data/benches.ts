@@ -14,7 +14,7 @@ const COLUMNS = 'id, latitude, longitude, place, type, date'
 function getClient() {
   if (!supabase) {
     throw new Error(
-      'Не заданы VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY в .env',
+      'VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are not set in .env',
     )
   }
 
@@ -66,7 +66,7 @@ export async function resolveMapsLink(url: string): Promise<string> {
   }
 
   if (!data?.url) {
-    throw new Error('Пустой ответ при раскрытии ссылки')
+    throw new Error('Empty response while expanding the link')
   }
 
   return data.url

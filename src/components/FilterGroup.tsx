@@ -20,7 +20,7 @@ function FilterGroup({
       <div className="filter-header">
         <div className="filter-title">{title}</div>
         <div className="filter-count">
-          {options.length > 0 ? options.length : 'Нет данных'}
+          {options.length > 0 ? options.length : 'No data'}
         </div>
       </div>
 

@@ -43,13 +43,13 @@ function createPopupContent(item: BenchItem): string {
 
   return `
     <div class="popup-content">
-      <div class="popup-title">${place || 'Лавочка'}</div>
+      <div class="popup-title">${place || 'Bench'}</div>
 
       ${
         type
           ? `
             <div class="popup-row">
-              <strong>Тип:</strong><br>
+              <strong>Type:</strong><br>
               ${type}
             </div>
           `
@@ -60,7 +60,7 @@ function createPopupContent(item: BenchItem): string {
         date
           ? `
             <div class="popup-row">
-              <strong>Дата:</strong><br>
+              <strong>Date:</strong><br>
               ${date}
             </div>
           `

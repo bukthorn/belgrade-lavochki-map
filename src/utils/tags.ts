@@ -14,8 +14,9 @@ export function getType(item: Pick<BenchItem, 'type'>): string {
   return normalizeType(item.type)
 }
 
+// Every type the form offers, plus any other type found in the data
 export function getAllTypes(items: BenchItem[]): string[] {
-  const types = new Set<string>()
+  const types = new Set<string>(BENCH_TYPES)
 
   items.forEach((item) => {
     const type = getType(item)

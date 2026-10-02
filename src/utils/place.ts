@@ -36,8 +36,10 @@ export function getPlace(item: Pick<BenchItem, 'place'>): string {
   return normalizePlace(item.place)
 }
 
+// Every place the form offers, plus any other place found in the data, so the
+// filters list a place even before the first bench with it is added
 export function getAllPlaces(items: BenchItem[]): string[] {
-  const places = new Set<string>()
+  const places = new Set<string>(PLACES)
 
   items.forEach((item) => {
     const place = getPlace(item)

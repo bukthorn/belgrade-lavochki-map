@@ -17,7 +17,7 @@ type Status = {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Неизвестная ошибка'
+  return error instanceof Error ? error.message : 'Unknown error'
 }
 
 function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
@@ -56,7 +56,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
         let source = text
 
         if (isShortMapsLink(text)) {
-          setLinkStatus({ kind: 'pending', message: 'Раскрываю ссылку…' })
+          setLinkStatus({ kind: 'pending', message: 'Expanding the link…' })
           source = await resolveMapsLink(text)
         }
 
@@ -67,11 +67,11 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
         if (point) {
           setLatitude(String(point.lat))
           setLongitude(String(point.lng))
-          setLinkStatus({ kind: 'ok', message: 'Координаты взяты из ссылки' })
+          setLinkStatus({ kind: 'ok', message: 'Coordinates taken from the link' })
         } else {
           setLinkStatus({
             kind: 'error',
-            message: 'В ссылке нет координат — введите их вручную',
+            message: 'No coordinates in the link — enter them manually',
           })
         }
       } catch (error) {
@@ -94,7 +94,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
     event.preventDefault()
     if (!draftPoint || !canSubmit) return
 
-    setSubmitStatus({ kind: 'pending', message: 'Сохраняю…' })
+    setSubmitStatus({ kind: 'pending', message: 'Saving…' })
 
     try {
       const bench = await addBench({
@@ -111,7 +111,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       setLink('')
       setLatitude('')
       setLongitude('')
-      setSubmitStatus({ kind: 'ok', message: 'Лавка добавлена' })
+      setSubmitStatus({ kind: 'ok', message: 'Bench added' })
     } catch (error) {
       setSubmitStatus({ kind: 'error', message: errorMessage(error) })
     }
@@ -122,23 +122,23 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       <button
         className="add-bench-toggle"
         type="button"
-        aria-label="Добавить лавку"
+        aria-label="Add a bench"
         onClick={() => setIsOpen(true)}
       >
-        +<span className="add-bench-toggle-text"> Добавить лавку</span>
+        +<span className="add-bench-toggle-text"> Add a bench</span>
       </button>
     )
   }
 
   return (
     <form className="add-bench-panel" onSubmit={handleSubmit}>
-      <div className="add-bench-header">
-        <div className="filter-title">Новая лавка</div>
+      <div className="panel-header">
+        <div className="filter-title">New bench</div>
 
         <button
-          className="add-bench-close"
+          className="panel-close"
           type="button"
-          aria-label="Закрыть"
+          aria-label="Close"
           onClick={() => setIsOpen(false)}
         >
           ×
@@ -146,7 +146,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       </div>
 
       <label className="add-bench-field">
-        <span className="add-bench-label">Ссылка Google Maps или «шир, долг»</span>
+        <span className="add-bench-label">Google Maps link or "lat, lng"</span>
         <input
           type="text"
           inputMode="url"
@@ -163,7 +163,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
 
       <div className="add-bench-row">
         <label className="add-bench-field">
-          <span className="add-bench-label">Широта</span>
+          <span className="add-bench-label">Latitude</span>
           <input
             type="text"
             inputMode="decimal"
@@ -173,7 +173,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
         </label>
 
         <label className="add-bench-field">
-          <span className="add-bench-label">Долгота</span>
+          <span className="add-bench-label">Longitude</span>
           <input
             type="text"
             inputMode="decimal"
@@ -184,10 +184,10 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       </div>
 
       <label className="add-bench-field">
-        <span className="add-bench-label">Место</span>
+        <span className="add-bench-label">Place</span>
         <select value={place} onChange={(event) => setPlace(event.target.value)}>
           <option value="" disabled>
-            Выберите…
+            Choose…
           </option>
           {PLACES.map((value) => (
             <option key={value} value={value}>
@@ -198,10 +198,10 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       </label>
 
       <label className="add-bench-field">
-        <span className="add-bench-label">Тип</span>
+        <span className="add-bench-label">Type</span>
         <select value={type} onChange={(event) => setType(event.target.value)}>
           <option value="" disabled>
-            Выберите…
+            Choose…
           </option>
           {BENCH_TYPES.map((value) => (
             <option key={value} value={value}>
@@ -212,7 +212,7 @@ function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
       </label>
 
       <button className="add-bench-submit" type="submit" disabled={!canSubmit}>
-        Добавить
+        Add
       </button>
 
       {submitStatus && (
