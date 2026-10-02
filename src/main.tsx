@@ -17,3 +17,11 @@ ReactDOM.createRoot(rootElement).render(
     React.createElement(App),
   ),
 )
+
+// Makes the site installable as an app; skipped in dev so it doesn't
+// cache the dev server
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
+  })
+}
