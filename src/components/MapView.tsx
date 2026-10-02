@@ -26,13 +26,12 @@ const MAP_STYLE: maplibregl.StyleSpecification = {
   sources: {
     osm: {
       type: 'raster',
-      tiles: [
-        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
+      // The tile usage policy allows only this host; the old a/b/c
+      // subdomains are deprecated
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution:
+        '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>',
     },
   },
   layers: [
