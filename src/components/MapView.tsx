@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { BenchItem } from '../types/bench'
-import { parseCoordinate } from '../utils/geo'
+import type { LatLng } from '../utils/geo'
 import { getType, getTypeBorder } from '../utils/tags'
 import { getPlace, getPlaceColor } from '../utils/place'
 
 type MapViewProps = {
   items: BenchItem[]
   allPlaces: string[]
+  draftPoint: LatLng | null
 }
 
 function escapeHtml(value: string | undefined): string {
@@ -29,9 +30,15 @@ function createMarkerElement(color: string, border: string): HTMLDivElement {
   return element
 }
 
+// 2026-09-23 -> 23.09.2026
+function formatDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-')
+  return day && month && year ? `${day}.${month}.${year}` : isoDate
+}
+
 function createPopupContent(item: BenchItem): string {
   const place = escapeHtml(item.place)
-  const date = escapeHtml(item.date)
+  const date = escapeHtml(item.date && formatDate(item.date))
   const type = escapeHtml(item.type)
 
   return `
@@ -63,10 +70,11 @@ function createPopupContent(item: BenchItem): string {
   `
 }
 
-function MapView({ items, allPlaces }: MapViewProps) {
+function MapView({ items, allPlaces, draftPoint }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
+  const draftMarkerRef = useRef<maplibregl.Marker | null>(null)
   const didFitBoundsRef = useRef(false)
 
   const [mapReady, setMapReady] = useState(false)
@@ -127,16 +135,9 @@ function MapView({ items, allPlaces }: MapViewProps) {
     markersRef.current = []
 
     const bounds = new maplibregl.LngLatBounds()
-    let validPointsCount = 0
-
     items.forEach((item) => {
-      const lat = parseCoordinate(item.latitude)
-      const lng = parseCoordinate(item.longitude)
-
-      if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        console.warn('Invalid coordinates:', item)
-        return
-      }
+      const lat = item.latitude
+      const lng = item.longitude
 
       const color = getPlaceColor(getPlace(item), allPlaces)
       const border = getTypeBorder(getType(item))
@@ -158,10 +159,9 @@ function MapView({ items, allPlaces }: MapViewProps) {
 
       markersRef.current.push(marker)
       bounds.extend([lng, lat])
-      validPointsCount += 1
     })
 
-    if (!didFitBoundsRef.current && validPointsCount > 0) {
+    if (!didFitBoundsRef.current && items.length > 0) {
       mapRef.current.fitBounds(bounds, {
         padding: 80,
         maxZoom: 17,
@@ -171,6 +171,29 @@ function MapView({ items, allPlaces }: MapViewProps) {
       didFitBoundsRef.current = true
     }
   }, [items, allPlaces, mapReady])
+
+  // Pin for the bench being added, so the point can be checked before saving
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map) return
+
+    draftMarkerRef.current?.remove()
+    draftMarkerRef.current = null
+
+    if (!draftPoint) return
+
+    const lngLat: [number, number] = [draftPoint.lng, draftPoint.lat]
+
+    draftMarkerRef.current = new maplibregl.Marker({ color: '#111111' })
+      .setLngLat(lngLat)
+      .addTo(map)
+
+    map.easeTo({
+      center: lngLat,
+      zoom: Math.max(map.getZoom(), 16),
+      duration: 600,
+    })
+  }, [draftPoint, mapReady])
 
   return <div ref={mapContainerRef} className="map-container" />
 }

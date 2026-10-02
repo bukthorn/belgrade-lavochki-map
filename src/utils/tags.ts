@@ -1,5 +1,9 @@
 import type { BenchItem } from '../types/bench'
 
+// Options for the add-bench form. Keep in sync with the type check
+// constraint in supabase/migrations
+export const BENCH_TYPES = ['backrest', 'backless']
+
 export function normalizeType(type: string | undefined): string {
   return String(type || '')
     .trim()

@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchBenchItems } from './data/googleSheets'
+import { fetchBenchItems, subscribeToNewBenches } from './data/benches'
 import type { BenchItem } from './types/bench'
+import type { LatLng } from './utils/geo'
 import { getAllTypes, itemMatchesSelectedTypes } from './utils/tags'
 import { getAllPlaces, itemMatchesSelectedPlaces } from './utils/place'
 import MapView from './components/MapView'
 import StatsPanel from './components/StatsPanel'
 import Filters from './components/Filters'
+import AddBenchForm from './components/AddBenchForm'
 
 function App() {
   const [items, setItems] = useState<BenchItem[]>([])
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set())
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set())
+  const [draftPoint, setDraftPoint] = useState<LatLng | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,6 +39,8 @@ function App() {
 
     loadData()
   }, [])
+
+  useEffect(() => subscribeToNewBenches(handleBenchAdded), [])
 
   const allPlaces = useMemo(() => getAllPlaces(items), [items])
   const allTypes = useMemo(() => getAllTypes(items), [items])
@@ -83,9 +88,22 @@ function App() {
     setSelectedTypes(new Set())
   }
 
+  // Own additions arrive twice: from the form and from the realtime feed
+  function handleBenchAdded(bench: BenchItem) {
+    setItems((currentItems) =>
+      currentItems.some((item) => item.id === bench.id)
+        ? currentItems
+        : [...currentItems, bench],
+    )
+  }
+
   return (
     <div className="app-map-page">
-      <MapView items={visibleItems} allPlaces={allPlaces} />
+      <MapView
+        items={visibleItems}
+        allPlaces={allPlaces}
+        draftPoint={draftPoint}
+      />
 
       <StatsPanel
         totalCount={items.length}
@@ -103,6 +121,11 @@ function App() {
         onTogglePlace={handleTogglePlace}
         onToggleType={handleToggleType}
         onClear={handleClearFilters}
+      />
+
+      <AddBenchForm
+        onAdded={handleBenchAdded}
+        onDraftPointChange={setDraftPoint}
       />
     </div>
   )

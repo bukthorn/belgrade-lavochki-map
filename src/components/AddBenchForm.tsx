@@ -1,0 +1,227 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { addBench, resolveMapsLink } from '../data/benches'
+import type { BenchItem } from '../types/bench'
+import { parseCoordinate, toLatLng, type LatLng } from '../utils/geo'
+import { isShortMapsLink, parseMapsLink } from '../utils/mapsLink'
+import { PLACES } from '../utils/place'
+import { BENCH_TYPES } from '../utils/tags'
+
+type AddBenchFormProps = {
+  onAdded: (bench: BenchItem) => void
+  onDraftPointChange: (point: LatLng | null) => void
+}
+
+type Status = {
+  kind: 'pending' | 'ok' | 'error'
+  message: string
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Неизвестная ошибка'
+}
+
+function AddBenchForm({ onAdded, onDraftPointChange }: AddBenchFormProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [link, setLink] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [place, setPlace] = useState('')
+  const [type, setType] = useState('')
+  const [linkStatus, setLinkStatus] = useState<Status | null>(null)
+  const [submitStatus, setSubmitStatus] = useState<Status | null>(null)
+
+  const draftPoint = useMemo(
+    () => toLatLng(parseCoordinate(latitude), parseCoordinate(longitude)),
+    [latitude, longitude],
+  )
+
+  useEffect(() => {
+    onDraftPointChange(isOpen ? draftPoint : null)
+  }, [isOpen, draftPoint, onDraftPointChange])
+
+  // Debounced so a link typed by hand doesn't fire a request per keystroke;
+  // the cancelled flag drops answers for a link that has since changed.
+  useEffect(() => {
+    const text = link.trim()
+
+    if (!text) {
+      setLinkStatus(null)
+      return
+    }
+
+    let cancelled = false
+
+    const timer = setTimeout(async () => {
+      try {
+        let source = text
+
+        if (isShortMapsLink(text)) {
+          setLinkStatus({ kind: 'pending', message: 'Раскрываю ссылку…' })
+          source = await resolveMapsLink(text)
+        }
+
+        if (cancelled) return
+
+        const point = parseMapsLink(source)
+
+        if (point) {
+          setLatitude(String(point.lat))
+          setLongitude(String(point.lng))
+          setLinkStatus({ kind: 'ok', message: 'Координаты взяты из ссылки' })
+        } else {
+          setLinkStatus({
+            kind: 'error',
+            message: 'В ссылке нет координат — введите их вручную',
+          })
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLinkStatus({ kind: 'error', message: errorMessage(error) })
+        }
+      }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [link])
+
+  const isSubmitting = submitStatus?.kind === 'pending'
+  const canSubmit = Boolean(draftPoint && place && type) && !isSubmitting
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!draftPoint || !canSubmit) return
+
+    setSubmitStatus({ kind: 'pending', message: 'Сохраняю…' })
+
+    try {
+      const bench = await addBench({
+        latitude: draftPoint.lat,
+        longitude: draftPoint.lng,
+        place,
+        type,
+      })
+
+      onAdded(bench)
+
+      // Place and type are kept: benches are usually added in batches
+      // along the same street
+      setLink('')
+      setLatitude('')
+      setLongitude('')
+      setSubmitStatus({ kind: 'ok', message: 'Лавка добавлена' })
+    } catch (error) {
+      setSubmitStatus({ kind: 'error', message: errorMessage(error) })
+    }
+  }
+
+  if (!isOpen) {
+    return (
+      <button
+        className="add-bench-toggle"
+        type="button"
+        aria-label="Добавить лавку"
+        onClick={() => setIsOpen(true)}
+      >
+        +<span className="add-bench-toggle-text"> Добавить лавку</span>
+      </button>
+    )
+  }
+
+  return (
+    <form className="add-bench-panel" onSubmit={handleSubmit}>
+      <div className="add-bench-header">
+        <div className="filter-title">Новая лавка</div>
+
+        <button
+          className="add-bench-close"
+          type="button"
+          aria-label="Закрыть"
+          onClick={() => setIsOpen(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <label className="add-bench-field">
+        <span className="add-bench-label">Ссылка Google Maps или «шир, долг»</span>
+        <input
+          type="text"
+          inputMode="url"
+          placeholder="https://maps.app.goo.gl/…"
+          value={link}
+          onChange={(event) => setLink(event.target.value)}
+        />
+        {linkStatus && (
+          <span className={`add-bench-status add-bench-status--${linkStatus.kind}`}>
+            {linkStatus.message}
+          </span>
+        )}
+      </label>
+
+      <div className="add-bench-row">
+        <label className="add-bench-field">
+          <span className="add-bench-label">Широта</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={latitude}
+            onChange={(event) => setLatitude(event.target.value)}
+          />
+        </label>
+
+        <label className="add-bench-field">
+          <span className="add-bench-label">Долгота</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={longitude}
+            onChange={(event) => setLongitude(event.target.value)}
+          />
+        </label>
+      </div>
+
+      <label className="add-bench-field">
+        <span className="add-bench-label">Место</span>
+        <select value={place} onChange={(event) => setPlace(event.target.value)}>
+          <option value="" disabled>
+            Выберите…
+          </option>
+          {PLACES.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="add-bench-field">
+        <span className="add-bench-label">Тип</span>
+        <select value={type} onChange={(event) => setType(event.target.value)}>
+          <option value="" disabled>
+            Выберите…
+          </option>
+          {BENCH_TYPES.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <button className="add-bench-submit" type="submit" disabled={!canSubmit}>
+        Добавить
+      </button>
+
+      {submitStatus && (
+        <div className={`add-bench-status add-bench-status--${submitStatus.kind}`}>
+          {submitStatus.message}
+        </div>
+      )}
+    </form>
+  )
+}
+
+export default AddBenchForm

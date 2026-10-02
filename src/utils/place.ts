@@ -1,8 +1,14 @@
 import type { BenchItem } from '../types/bench'
 
+// Options for the add-bench form. Keep in sync with the place check
+// constraint in supabase/migrations
+export const PLACES = ['street', 'park', 'yard', 'square']
+
 const PLACE_COLORS: Record<string, string> = {
   street: '#8a7360',
   park: '#2e7d32',
+  yard: '#29b6f6',
+  square: '#9e9e9e',
 }
 
 const AUTO_PLACE_PALETTE = [
@@ -41,7 +47,7 @@ export function getAllPlaces(items: BenchItem[]): string[] {
   return Array.from(places).sort()
 }
 
-// street/park have fixed colors; any other place gets one slot from
+// Places in PLACE_COLORS have fixed colors; any other place gets one slot from
 // AUTO_PLACE_PALETTE, assigned by alphabetical position so it stays the
 // same across reloads and never collides with another custom place.
 export function getPlaceColor(place: string, allPlaces: string[]): string {
