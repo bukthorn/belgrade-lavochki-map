@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { FeatureCollection, Point } from 'geojson'
 import type { BenchItem } from '../types/bench'
 import type { LatLng } from '../utils/geo'
 import { getType, getTypeStroke } from '../utils/tags'
 import { getPlace, getPlaceColor } from '../utils/place'
+
+// MapLibre looks for its worker next to its own file, which no longer
+// exists once Vite bundles it; without the worker vector tiles never load
+// and the map stays blank. Vite builds the worker separately and gives its URL.
+maplibregl.setWorkerUrl(maplibreWorkerUrl)
 
 type MapViewProps = {
   items: BenchItem[]
