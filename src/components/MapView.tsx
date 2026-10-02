@@ -19,8 +19,32 @@ type MapViewProps = {
   onMapClick: (point: LatLng) => void
 }
 
-// Free vector tiles without an API key or a usage limit: openfreemap.org
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+// Raster OSM tiles. Vector tiles (OpenFreeMap) were tried and ran phones
+// out of memory: the map went blank while panning and froze after reopening.
+const MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm-layer',
+      type: 'raster',
+      source: 'osm',
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+}
 
 // Benches are drawn by the map itself as one GeoJSON layer instead of a DOM
 // element each, so thousands of them stay smooth and an update doesn't
