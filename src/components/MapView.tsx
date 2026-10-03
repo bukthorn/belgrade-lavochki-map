@@ -217,9 +217,22 @@ function MapView({ items, allPlaces, draftPoint, onMapClick }: MapViewProps) {
 
     map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
 
+    // Blue dot for the user's position; the button recenters on it.
+    // Browsers allow geolocation only over HTTPS (and on localhost).
+    const geolocate = new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      fitBoundsOptions: { maxZoom: 16 },
+    })
+
+    map.addControl(geolocate, 'bottom-right')
+
     map.on('load', () => {
       addBenchLayers(map)
       setMapReady(true)
+
+      // Ask for the position right away instead of waiting for the button
+      geolocate.trigger()
     })
 
     let popup: maplibregl.Popup | null = null
