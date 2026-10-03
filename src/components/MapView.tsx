@@ -6,6 +6,7 @@ import type { BenchItem } from '../types/bench'
 import type { LatLng } from '../utils/geo'
 import { getType, getTypeStroke } from '../utils/tags'
 import { getPlace, getPlaceColor } from '../utils/place'
+import { getDirectionsUrl } from '../utils/mapsLink'
 
 // MapLibre looks for its worker next to its own file, which no longer
 // exists once Vite bundles it; without the worker vector tiles never load
@@ -113,6 +114,15 @@ function createPopupContent(item: BenchItem): string {
           `
           : ''
       }
+
+      <a
+        class="popup-directions"
+        href="${escapeHtml(getDirectionsUrl({ lat: item.latitude, lng: item.longitude }))}"
+        target="_blank"
+        rel="noopener"
+      >
+        Directions
+      </a>
     </div>
   `
 }

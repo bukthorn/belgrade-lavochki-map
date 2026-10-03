@@ -465,6 +465,23 @@ body {
   font-size: 13px;
 }
 
+.popup-directions {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.popup-directions:hover {
+  background: #333333;
+}
+
 .tag {
   display: inline-block;
   padding: 2px 7px;

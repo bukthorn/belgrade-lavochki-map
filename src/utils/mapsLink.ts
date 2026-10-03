@@ -28,6 +28,12 @@ export function isShortMapsLink(text: string): boolean {
   }
 }
 
+// Walking route from wherever the user is now; Google Maps takes the start
+// from the device's own location, so it isn't passed here
+export function getDirectionsUrl({ lat, lng }: LatLng): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`
+}
+
 // Accepts a full Google Maps URL or plain "lat, lng". Order matters:
 // !3d/!4d is the pin itself, while /@lat,lng is only the viewport centre.
 export function parseMapsLink(text: string): LatLng | null {
